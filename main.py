@@ -1,12 +1,15 @@
 import os
 import telebot
 from PIL import Image
+from dotenv import load_dotenv 
+
 import random
 
-bot = telebot.TeleBot('5843636908:AAHqiteN8CYra79lir7W0OSwMPNgfpAXw8g')
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 mom = ['Маме 1.png', "Маме 2.png"]
-grandmom = ['Бабушка 1.png', 'Бабушка 2.png',]
+grandmom = ['Бабушка 1.png', 'Бабушке 2.png',]
 collega= ['Коллеге 1.png', 'Коллеге 2.png',]
 love = ['Любимой 1.png', 'Любимой 2.png',]
 sister = ["Сестре 1.png", 'Сестре 2.png',]
@@ -101,13 +104,28 @@ def save_and_combine_photo(message, call):
             choice = random.choice(me)
             frame = Image.open(choice).convert('RGBA')
         photo = Image.open(f"photos/{file_name}").convert('RGBA')
-        frame = frame.resize(photo.size)
-
-            # изменение размера фото
+        frame_size = frame.size
+        photo_size = photo.size
+        if photo_size != frame_size:
+            diff_x = frame_size[0] - photo_size[0]
+            diff_y = frame_size[1] - photo_size[1]
+            if diff_x < 0 or diff_y < 0:
+                # фото больше рамки, уменьшаем фото
+                if diff_x < 0 and diff_y < 0:
+                    # фото больше рамки по обеим осям
+                    ratio = min(frame_size[0] / photo_size[0], frame_size[1] / photo_size[1])
+                elif diff_x < 0:
+                    # фото больше рамки по горизонтали
+                    ratio = frame_size[0] / photo_size[0]
+                else:
+                    # фото больше рамки по вертикали
+                    ratio = frame_size[1] / photo_size[1]
+                new_size = (int(photo_size[0] * ratio), int(photo_size[1] * ratio))
+                photo = photo.resize(new_size, Image.ANTIALIAS)
+            else:
+                # фото меньше рамки, увеличиваем рамку
+                frame = frame.resize(photo_size, Image.ANTIALIAS)
         photo = Image.alpha_composite(photo, frame)
-
-            
-            # сохранение объединенного изображения
         combined_path = f"Final/{file_name}"
         photo.save(combined_path, format='PNG')
         with open(combined_path, "rb") as f:
