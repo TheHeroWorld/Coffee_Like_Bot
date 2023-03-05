@@ -1,9 +1,12 @@
 import os
 import telebot
 from PIL import Image
+from dotenv import load_dotenv 
+
 import random
 
-bot = telebot.TeleBot('5843636908:AAHqiteN8CYra79lir7W0OSwMPNgfpAXw8g')
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 mom = ['Маме 1.png', "Маме 2.png"]
 grandmom = ['Бабушка 1.png', 'Бабушка 2.png',]
