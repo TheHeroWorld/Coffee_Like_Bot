@@ -104,38 +104,44 @@ def save_and_combine_photo(message, call):
             choice = random.choice(me)
             frame = Image.open(choice).convert('RGBA')
         photo = Image.open(f"photos/{file_name}").convert('RGBA')
-        frame_size = frame.size
-        photo_size = photo.size
-        if photo_size != frame_size:
-            diff_x = frame_size[0] - photo_size[0]
-            diff_y = frame_size[1] - photo_size[1]
-            if diff_x < 0 or diff_y < 0:
-                # фото больше рамки, уменьшаем фото
-                if diff_x < 0 and diff_y < 0:
-                    # фото больше рамки по обеим осям
-                    ratio = min(frame_size[0] / photo_size[0], frame_size[1] / photo_size[1])
-                elif diff_x < 0:
-                    # фото больше рамки по горизонтали
-                    ratio = frame_size[0] / photo_size[0]
-                else:
-                    # фото больше рамки по вертикали
-                    ratio = frame_size[1] / photo_size[1]
-                new_size = (int(photo_size[0] * ratio), int(photo_size[1] * ratio))
-                photo = photo.resize(new_size, Image.ANTIALIAS)
+
+        # Проверяем соотношение сторон фото и рамки
+        # определение соотношения сторон рамки и фото
+        frame_ratio = frame.width / frame.height
+        photo_ratio = photo.width / photo.height
+
+        # обрезка фото, если соотношение сторон не совпадает с рамкой
+        if frame_ratio != photo_ratio:
+            if frame_ratio > photo_ratio:
+                new_height = int(photo.width / frame_ratio)
+                diff = (photo.height - new_height) // 2
+                photo = photo.crop((0, diff, photo.width, diff + new_height))
             else:
-                # фото меньше рамки, увеличиваем рамку
-                frame = frame.resize(photo_size, Image.ANTIALIAS)
+                new_width = int(photo.height * frame_ratio)
+                diff = (photo.width - new_width) // 2
+                photo = photo.crop((diff, 0, diff + new_width, photo.height))
+
+
+        # Изменяем размер рамки до размеров фото
+        frame = frame.resize(photo.size)
+
+        # изменение размера фото
         photo = Image.alpha_composite(photo, frame)
+
+        # сохранение объединенного изображения
         combined_path = f"Final/{file_name}"
         photo.save(combined_path, format='PNG')
+
         with open(combined_path, "rb") as f:
             bot.send_photo(chat_id, f)
+
         start(message, retry=True)
         bot.send_message(chat_id, 'Готово! Открытку можно отправлять адресату 👍')
         bot.send_message(chat_id, 'Будет еще круче, если ты поделишься этой открыткой в сториз Instagram или ВКонтакте и отметишь нас @coffeelike_com 😻')
     except Exception:
         bot.reply_to(message, f"Ошибка: загрузи фото еще раз ")
         start(message)
-        return 
+        return
+
 
 bot.polling(none_stop=True, interval=0)
