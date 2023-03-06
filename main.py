@@ -1,11 +1,12 @@
 import os
 import telebot
 from PIL import Image
-from dotenv import load_dotenv 
-
+import logging
 import random
+logging.basicConfig(level=logging.INFO, filename="bot.log", format='%(asctime)s %(levelname)s: %(message)s')
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+TELEGRAM_TOKEN = ""
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 mom = ['Маме 1.png', "Маме 2.png"]
@@ -32,11 +33,13 @@ button_text = {
 def start_handler(message):
     chat_id = message.chat.id
     bot.send_message(chat_id, 'Привет! Это фотобот COFFEE LIKE, и он поможет тебе сделать очень душевные и приятные поздравления для твоих близких. 💚 Нужно только прислать фото, из которого получится милая открыточка.')
+    logging.info(f"Пользавотель {chat_id} запустил бота")
     start(message)
     
     
 def start(message, retry=False):
     chat_id = message.chat.id
+    username = message.from_user.username
     markup = telebot.types.InlineKeyboardMarkup()
     btn1 = telebot.types.InlineKeyboardButton(text='Маме 💝', callback_data='mom')
     btn2 = telebot.types.InlineKeyboardButton(text='Бабушке 👵🏼', callback_data='grandmom')
@@ -51,6 +54,7 @@ def start(message, retry=False):
         msg = bot.send_message(chat_id, 'Укажи, для кого будем делать открытку:', reply_markup=markup, )
     else:
         msg = bot.send_message(chat_id, 'Еще разок?', reply_markup=markup)
+    logging.info(f"Пользавотель:{username} ID: {chat_id} выбирает кому сделать открытку")
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -58,15 +62,20 @@ def Frames(call):
     original_text = call.message.text
     chat_id = call.message.chat.id
     bot.answer_callback_query(call.id, text="Выбрано: " + button_text[call.data])
-    bot.send_message(chat_id, f'Вы выбрали {button_text[call.data]}. Загрузите своё фото.')
+    if call.data == "me":
+        bot.send_message(chat_id, f'Вы выбрали {button_text[call.data]}. Загрузите своё фото.')
+    else:
+        bot.send_message(chat_id, f'Вы выбрали {button_text[call.data]}. Загрузите её фото (лучше портрет)')
     bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text=original_text, reply_markup=None)
     bot.register_next_step_handler(call.message, lambda message: save_and_combine_photo(message, call.data))
+    logging.info(f"Ловим кнопку {chat_id}")
     
 
 
 
 def save_and_combine_photo(message, call):
     chat_id = message.chat.id
+    username = message.from_user.username
     try:
         file_id = message.photo[-1].file_id
         file_info = bot.get_file(file_id)
@@ -77,32 +86,40 @@ def save_and_combine_photo(message, call):
         file = bot.download_file(file_path)
         with open(f"photos/{file_name}", 'wb') as f:
             f.write(file)
-        bot.send_message(chat_id, "Вжух вжух, обработка фото ")
+        bot.send_message(chat_id, "Вжух вжух, обработка фото 🪄 ")
             # загрузка рамки и фото
         if call == 'mom':
             choice = random.choice(mom)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'grandmom':
             choice = random.choice(grandmom)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'colleague':
             choice = random.choice(collega)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'love':
             choice = random.choice(love)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'sister':
                 choice = random.choice(sister)
                 frame = Image.open(choice).convert('RGBA')
+                logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'daughter':
             choice = random.choice(daughter)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'Friend':
             choice = random.choice(Friend)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         elif call == 'me':
             choice = random.choice(me)
             frame = Image.open(choice).convert('RGBA')
+            logging.info(f"Пользавотель:{username} ID: {chat_id} выбрал {call} ")
         photo = Image.open(f"photos/{file_name}").convert('RGBA')
 
         # Проверяем соотношение сторон фото и рамки
@@ -124,22 +141,30 @@ def save_and_combine_photo(message, call):
 
         # Изменяем размер рамки до размеров фото
         frame = frame.resize(photo.size)
+        logging.info(f"Делаем resize для :{username} ID: {chat_id}")
 
         # изменение размера фото
         photo = Image.alpha_composite(photo, frame)
+        logging.info(f"Обьединяем фото для :{username} ID: {chat_id}")
 
         # сохранение объединенного изображения
         combined_path = f"Final/{file_name}"
         photo.save(combined_path, format='PNG')
+        logging.info(f"Сохроняем фото для :{username} ID: {chat_id}")
 
         with open(combined_path, "rb") as f:
             bot.send_photo(chat_id, f)
+        os.remove(f"photos/{file_name}")
+        os.remove(combined_path)
+        logging.info(f"Удаляем фото :{username} ID: {chat_id}")
 
-        start(message, retry=True)
+        start(message, retry=True)  
         bot.send_message(chat_id, 'Готово! Открытку можно отправлять адресату 👍')
         bot.send_message(chat_id, 'Будет еще круче, если ты поделишься этой открыткой в сториз Instagram или ВКонтакте и отметишь нас @coffeelike_com 😻')
-    except Exception:
+        logging.info(f"Обработка фото и отправка пользавотелю  {chat_id}")
+    except Exception as e:
         bot.reply_to(message, f"Ошибка: загрузи фото еще раз ")
+        logging.critical('Критическая ошибка: %s',e)
         start(message)
         return
 
