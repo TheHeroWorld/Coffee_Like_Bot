@@ -221,10 +221,12 @@ bot.polling(none_stop=True, interval=0)
 
 
 def main():
+    """Основная функция"""
+
     if not check_tokens():
         logging.critical('Empty token')
         raise KeyError('Empty token')
-    bot = telebot.TeleBot(TELEGRAM_TOKEN)
+    telebot.TeleBot(TELEGRAM_TOKEN)
 
 
 if __name__ == '__main__':
